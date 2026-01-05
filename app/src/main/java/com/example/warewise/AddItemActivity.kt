@@ -27,6 +27,7 @@ class AddItemActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = "Add New Item"
 
+        setupSpinner()
         setupObservers()
         setupListeners()
         
@@ -44,7 +45,8 @@ class AddItemActivity : AppCompatActivity() {
                 binding.etItemBarcode.setText(scannedBarcode)
             }
         }
-    }
+        }
+
 
     private fun setupObservers() {
         viewModel.item.observe(this) { item ->
@@ -56,12 +58,53 @@ class AddItemActivity : AppCompatActivity() {
                 binding.etItemLocation.setText(item.location)
                 binding.etItemCostPrice.setText(item.costPrice.toString())
                 
-                if (item.getType() == "UNIT") {
-                    binding.rbUnit.isChecked = true
-                    binding.etItemQuantity.setText((item as UnitItem).quantity.toString())
-                } else {
-                    binding.rbWeight.isChecked = true
-                    binding.etItemQuantity.setText((item as WeightItem).weight.toString())
+
+                // Handle Item Type and Extra Info
+                val type = item.getType()
+                val spinnerAdapter = binding.spItemType.adapter as android.widget.ArrayAdapter<String>
+                val typeArray = arrayOf("Standard", "Electronics", "Food", "Furniture") // Must match setupSpinner
+                
+                // Map internal type to spinner display (Case insensitive matching if needed, but here exact defaults)
+                var spinnerIndex = 0
+                val normalizedType = type.uppercase()
+                
+                when (normalizedType) {
+                    "ELECTRONICS" -> spinnerIndex = typeArray.indexOf("Electronics")
+                    "FOOD" -> spinnerIndex = typeArray.indexOf("Food")
+                    "FURNITURE" -> spinnerIndex = typeArray.indexOf("Furniture")
+                    "UNIT", "WEIGHT" -> spinnerIndex = typeArray.indexOf("Standard")
+                    else -> spinnerIndex = 0
+                }
+                
+                if (spinnerIndex >= 0) {
+                    binding.spItemType.setSelection(spinnerIndex)
+                }
+
+                // Populate Quantity/Weight and Extra Info
+                when (item) {
+                    is UnitItem -> {
+                        binding.rbUnit.isChecked = true
+                        binding.etItemQuantity.setText(item.quantity.toString())
+                    }
+                    is WeightItem -> {
+                        binding.rbWeight.isChecked = true
+                        binding.etItemQuantity.setText(item.weight.toString())
+                    }
+                    is Electronics -> {
+                        binding.rbUnit.isChecked = true
+                        binding.etItemQuantity.setText(item.quantity.toString())
+                        binding.etExtraInfo.setText(item.warranty)
+                    }
+                    is Food -> {
+                        binding.rbUnit.isChecked = true
+                        binding.etItemQuantity.setText(item.quantity.toString())
+                        binding.etExtraInfo.setText(item.expiryDate)
+                    }
+                    is Furniture -> {
+                        binding.rbUnit.isChecked = true
+                        binding.etItemQuantity.setText(item.quantity.toString())
+                        binding.etExtraInfo.setText(item.material)
+                    }
                 }
             }
         }
@@ -92,6 +135,53 @@ class AddItemActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupSpinner() {
+        val itemTypes = arrayOf("Standard", "Electronics", "Food", "Furniture")
+        val adapter = android.widget.ArrayAdapter(this, android.R.layout.simple_spinner_item, itemTypes)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.spItemType.adapter = adapter
+
+        binding.spItemType.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+                val selectedType = itemTypes[position]
+                updateUIForType(selectedType)
+            }
+
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+        }
+    }
+
+    private fun updateUIForType(type: String) {
+        when (type) {
+            "Standard" -> {
+                binding.tilExtraInfo.visibility = android.view.View.GONE
+                binding.rbUnit.isEnabled = true
+                binding.rbWeight.isEnabled = true
+            }
+            "Electronics" -> {
+                binding.tilExtraInfo.visibility = android.view.View.VISIBLE
+                binding.tilExtraInfo.hint = "Enter Warranty (e.g., 2 Years)"
+                binding.rbUnit.isChecked = true
+                binding.rbUnit.isEnabled = false
+                binding.rbWeight.isEnabled = false
+            }
+            "Food" -> {
+                binding.tilExtraInfo.visibility = android.view.View.VISIBLE
+                binding.tilExtraInfo.hint = "Enter Expiry Date"
+                binding.rbUnit.isChecked = true
+                binding.rbUnit.isEnabled = false
+                binding.rbWeight.isEnabled = false
+            }
+            "Furniture" -> {
+                binding.tilExtraInfo.visibility = android.view.View.VISIBLE
+                binding.tilExtraInfo.hint = "Enter Material"
+                binding.rbUnit.isChecked = true
+                binding.rbUnit.isEnabled = false
+                binding.rbWeight.isEnabled = false
+            }
+        }
+    }
+
     private val scanLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             val barcode = result.data?.getStringExtra("SCANNED_BARCODE")
@@ -115,13 +205,40 @@ class AddItemActivity : AppCompatActivity() {
 
         val costPrice = costPriceStr.toDoubleOrNull() ?: 0.0
         val isUnit = binding.rbUnit.isChecked
+        val selectedType = binding.spItemType.selectedItem.toString()
+        val extraInfo = binding.etExtraInfo.text.toString()
 
-        val item: InventoryItem = if (isUnit) {
-            val quantity = quantityStr.toIntOrNull() ?: 0
-            UnitItem(if (isEditMode) editingItemId else 0, name, barcode, description, supplier, location, costPrice, quantity)
-        } else {
-            val weight = quantityStr.toDoubleOrNull() ?: 0.0
-            WeightItem(if (isEditMode) editingItemId else 0, name, barcode, description, supplier, location, costPrice, weight)
+        val item: InventoryItem = when (selectedType) {
+            "Electronics" -> {
+                val quantity = quantityStr.toIntOrNull() ?: 0
+                Electronics(if (isEditMode) editingItemId else 0, name, barcode, description, supplier, location, costPrice, quantity, extraInfo)
+            }
+            "Food" -> {
+                val quantity = quantityStr.toIntOrNull() ?: 0
+                Food(if (isEditMode) editingItemId else 0, name, barcode, description, supplier, location, costPrice, quantity, extraInfo)
+            }
+            "Furniture" -> {
+                val quantity = quantityStr.toIntOrNull() ?: 0
+                Furniture(if (isEditMode) editingItemId else 0, name, barcode, description, supplier, location, costPrice, quantity, extraInfo)
+            }
+            "Standard", "UNIT" -> { // Handle Standard or fallback
+                 if (isUnit) {
+                    val quantity = quantityStr.toIntOrNull() ?: 0
+                    UnitItem(if (isEditMode) editingItemId else 0, name, barcode, description, supplier, location, costPrice, quantity)
+                } else {
+                    val weight = quantityStr.toDoubleOrNull() ?: 0.0
+                    WeightItem(if (isEditMode) editingItemId else 0, name, barcode, description, supplier, location, costPrice, weight)
+                }
+            }
+            else -> {
+                 if (isUnit) {
+                    val quantity = quantityStr.toIntOrNull() ?: 0
+                    UnitItem(if (isEditMode) editingItemId else 0, name, barcode, description, supplier, location, costPrice, quantity)
+                } else {
+                    val weight = quantityStr.toDoubleOrNull() ?: 0.0
+                    WeightItem(if (isEditMode) editingItemId else 0, name, barcode, description, supplier, location, costPrice, weight)
+                }
+            }
         }
 
         if (isEditMode) {

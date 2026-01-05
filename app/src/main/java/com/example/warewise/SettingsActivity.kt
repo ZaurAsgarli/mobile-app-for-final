@@ -15,6 +15,34 @@ class SettingsActivity : BaseActivity() {
 
     private lateinit var binding: ActivitySettingsBinding
     private val viewModel: SettingsViewModel by viewModels()
+    private lateinit var dbBackupHelper: DbBackupHelper
+
+    private val exportLauncher = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) {
+            val success = dbBackupHelper.exportData(uri)
+            if (success) {
+                android.widget.Toast.makeText(this, "Data exported successfully", android.widget.Toast.LENGTH_SHORT).show()
+            } else {
+                android.widget.Toast.makeText(this, "Export failed", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private val importLauncher = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            val success = dbBackupHelper.importData(uri)
+            if (success) {
+                android.widget.Toast.makeText(this, "Data imported successfully", android.widget.Toast.LENGTH_SHORT).show()
+                // Ideally refresh data if we were viewing it, but here we are in Settings.
+            } else {
+                AlertDialog.Builder(this)
+                    .setTitle("Import Failed")
+                    .setMessage("Invalid File Format or Corrupt Data.")
+                    .setPositiveButton("OK", null)
+                    .show()
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -22,6 +50,9 @@ class SettingsActivity : BaseActivity() {
         setContentView(binding.root)
 
         setupBottomNavigation(binding.bottomNavigation, R.id.nav_settings)
+        
+        dbBackupHelper = DbBackupHelper(this)
+        
         setupObservers()
         setupListeners()
     }
@@ -45,6 +76,16 @@ class SettingsActivity : BaseActivity() {
         // ADVANCED THEME SETTINGS: Show dialog on row click
         binding.layoutTheme.setOnClickListener {
             showThemeSelectionDialog()
+        }
+
+        binding.btnExportData.setOnClickListener {
+            // Suggest a filename
+            val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.getDefault()).format(java.util.Date())
+            exportLauncher.launch("warewise_backup_$timestamp.json")
+        }
+
+        binding.btnImportData.setOnClickListener {
+            importLauncher.launch("application/json")
         }
 
         binding.btnFactoryReset.setOnClickListener {

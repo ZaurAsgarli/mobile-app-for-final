@@ -32,11 +32,23 @@ class InventoryListActivity : BaseActivity(), InventoryAdapter.OnItemInteraction
                 return false
             }
 
+
+
             override fun onQueryTextChange(newText: String?): Boolean {
                 filter(newText)
                 return true
             }
         })
+
+        setupFilters()
+    }
+
+    private fun setupFilters() {
+        binding.chipGroupInfo.setOnCheckedChangeListener { group, checkedId ->
+            // Re-apply filter with current search text
+            val currentQuery = binding.searchView.query.toString()
+            filter(currentQuery)
+        }
     }
     
     override fun onCreateOptionsMenu(menu: android.view.Menu?): Boolean {
@@ -74,14 +86,28 @@ class InventoryListActivity : BaseActivity(), InventoryAdapter.OnItemInteraction
     }
 
     private fun filter(text: String?) {
-        if (text.isNullOrEmpty()) {
-            adapter.updateList(allItems)
+        val query = text?.trim() ?: ""
+        
+        // 1. Filter by Search Query
+        var filteredList = if (query.isEmpty()) {
+            allItems
         } else {
-            val filteredList = allItems.filter {
-                it.name.contains(text, ignoreCase = true) || it.barcode.contains(text)
+            allItems.filter {
+                it.name.contains(query, ignoreCase = true) || it.barcode.contains(query)
             }
-            adapter.updateList(filteredList)
         }
+
+        // 2. Filter by Chip Selection
+        val checkedId = binding.chipGroupInfo.checkedChipId
+        filteredList = when (checkedId) {
+            binding.chipElectronics.id -> filteredList.filter { it.getType().equals("ELECTRONICS", ignoreCase = true) }
+            binding.chipFood.id -> filteredList.filter { it.getType().equals("FOOD", ignoreCase = true) }
+            binding.chipFurniture.id -> filteredList.filter { it.getType().equals("FURNITURE", ignoreCase = true) }
+            binding.chipLowStock.id -> filteredList.filter { it.isLowStock() }
+            else -> filteredList // "All" or nothing selected
+        }
+
+        adapter.updateList(filteredList)
     }
 
     override fun onEditClicked(item: InventoryItem) {

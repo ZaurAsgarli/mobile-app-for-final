@@ -100,6 +100,14 @@
                     android:layout_marginBottom="8dp"/>
 
                 <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnImportData"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Import Data"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_marginBottom="16dp"/>
+
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnFactoryReset"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
