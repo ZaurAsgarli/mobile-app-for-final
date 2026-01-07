@@ -17,13 +17,10 @@ class DashboardActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // THEME PERSISTENCE CHECK: Apply theme before view creation to avoid flicker
-        val prefs = getSharedPreferences("WareWisePrefs", android.content.Context.MODE_PRIVATE)
-        val themeMode = prefs.getInt("THEME_MODE", androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
-        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(themeMode)
-        
         binding = ActivityDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        
+        // Theme handled by BaseActivity
         
         setupBottomNavigation(binding.bottomNavigation, R.id.nav_home)
 

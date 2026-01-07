@@ -6,7 +6,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.warewise.databinding.ActivityLoginBinding
 
-class LoginActivity : AppCompatActivity() {
+class LoginActivity : BaseActivity() {
 
     private lateinit var binding: ActivityLoginBinding
     private lateinit var dbHelper: DatabaseHelper
@@ -15,8 +15,8 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         
         // 1. Session Persistence Check
-        val sharedPreferences = getSharedPreferences("WareWisePrefs", MODE_PRIVATE)
-        if (sharedPreferences.getBoolean("IS_LOGGED_IN", false)) {
+        val sharedPreferences = getSharedPreferences(WareWiseApplication.PREFS_NAME, MODE_PRIVATE)
+        if (sharedPreferences.getBoolean(WareWiseApplication.KEY_IS_LOGGED_IN, false)) {
             startActivity(Intent(this, DashboardActivity::class.java))
             finish()
             return
@@ -25,10 +25,8 @@ class LoginActivity : AppCompatActivity() {
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
         
-        // 2. Theme Persistence (Immediate check to prevent flicker on login screen)
-        val themeMode = sharedPreferences.getInt("THEME_MODE", androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
-        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(themeMode)
-
+        // Theme is now handled by BaseActivity
+        
         dbHelper = DatabaseHelper(this)
 
         binding.btnLogin.setOnClickListener {
@@ -48,7 +46,7 @@ class LoginActivity : AppCompatActivity() {
                         val editor = sharedPreferences.edit()
                         editor.putString("USERNAME", userProfile.username)
                         editor.putString("EMPLOYEE_ID", userProfile.employeeId)
-                        editor.putBoolean("IS_LOGGED_IN", true) // Set logged in flag
+                        editor.putBoolean(WareWiseApplication.KEY_IS_LOGGED_IN, true) // Set logged in flag
                         editor.apply()
                     }
 

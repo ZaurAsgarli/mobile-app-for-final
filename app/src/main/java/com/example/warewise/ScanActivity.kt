@@ -26,7 +26,7 @@ import com.journeyapps.barcodescanner.ScanOptions
  * - Fallback barcode lookup for existing items
  * - Robust error handling with try-catch
  */
-class ScanActivity : AppCompatActivity() {
+class ScanActivity : BaseActivity() {
 
     companion object {
         private const val TAG = "ScanActivity"

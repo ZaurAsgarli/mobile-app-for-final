@@ -11,7 +11,7 @@ import com.example.warewise.ui.additem.AddItemViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-class AddItemActivity : AppCompatActivity() {
+class AddItemActivity : BaseActivity() {
 
     private lateinit var binding: ActivityAddItemBinding
     private val viewModel: AddItemViewModel by viewModels()
@@ -60,21 +60,21 @@ class AddItemActivity : AppCompatActivity() {
                 
 
                 // Handle Item Type and Extra Info
-                val type = item.getType()
-                val spinnerAdapter = binding.spItemType.adapter as android.widget.ArrayAdapter<String>
+                // Handle Item Type and Extra Info
+                val type = item.type // Now getting Enum
+                // val spinnerAdapter = binding.spItemType.adapter as android.widget.ArrayAdapter<String> // Unused
                 val typeArray = arrayOf("Standard", "Electronics", "Food", "Furniture") // Must match setupSpinner
                 
-                // Map internal type to spinner display (Case insensitive matching if needed, but here exact defaults)
-                var spinnerIndex = 0
-                val normalizedType = type.uppercase()
-                
-                when (normalizedType) {
-                    "ELECTRONICS" -> spinnerIndex = typeArray.indexOf("Electronics")
-                    "FOOD" -> spinnerIndex = typeArray.indexOf("Food")
-                    "FURNITURE" -> spinnerIndex = typeArray.indexOf("Furniture")
-                    "UNIT", "WEIGHT" -> spinnerIndex = typeArray.indexOf("Standard")
-                    else -> spinnerIndex = 0
+                // Map internal type to spinner display
+                var spinnerIndex = when (type) {
+                    ItemType.ELECTRONICS -> typeArray.indexOf("Electronics")
+                    ItemType.FOOD -> typeArray.indexOf("Food")
+                    ItemType.FURNITURE -> typeArray.indexOf("Furniture")
+                    ItemType.UNIT, ItemType.WEIGHT -> typeArray.indexOf("Standard")
+                    // No else needed if exhaustive or default to 0
                 }
+                
+                if (spinnerIndex < 0) spinnerIndex = 0
                 
                 if (spinnerIndex >= 0) {
                     binding.spItemType.setSelection(spinnerIndex)
@@ -231,6 +231,7 @@ class AddItemActivity : AppCompatActivity() {
                 }
             }
             else -> {
+                // Default fallback
                  if (isUnit) {
                     val quantity = quantityStr.toIntOrNull() ?: 0
                     UnitItem(if (isEditMode) editingItemId else 0, name, barcode, description, supplier, location, costPrice, quantity)

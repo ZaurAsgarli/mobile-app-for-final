@@ -9,6 +9,11 @@ abstract class BaseActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Enforce Theme for ALL activities extending this
+        val sharedPreferences = getSharedPreferences(WareWiseApplication.PREFS_NAME, MODE_PRIVATE)
+        val themeMode = sharedPreferences.getInt(WareWiseApplication.KEY_THEME, androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(themeMode)
     }
 
     @Suppress("DEPRECATION")

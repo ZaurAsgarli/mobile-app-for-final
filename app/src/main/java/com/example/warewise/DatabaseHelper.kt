@@ -141,7 +141,8 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
                 put(COL_SUPPLIER, item.supplier)
                 put(COL_LOCATION, item.location)
                 put(COL_COST_PRICE, item.costPrice)
-                put(COL_TYPE, item.getType())
+                // ENUM: Store as String
+                put(COL_TYPE, item.type.name) 
                 put(COL_EXTRA_INFO, item.getExtraInfo())
             }
 
@@ -225,14 +226,24 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
             val supplier = cursor.getString(cursor.getColumnIndexOrThrow(COL_SUPPLIER)) ?: ""
             val location = cursor.getString(cursor.getColumnIndexOrThrow(COL_LOCATION)) ?: ""
             val costPrice = cursor.getDouble(cursor.getColumnIndexOrThrow(COL_COST_PRICE))
-            val type = cursor.getString(cursor.getColumnIndexOrThrow(COL_TYPE)) ?: "UNIT"
+            
+            // ENUM: Safely parse type string
+            val typeStr = cursor.getString(cursor.getColumnIndexOrThrow(COL_TYPE)) ?: "UNIT"
+            
+            val type = try {
+                ItemType.valueOf(typeStr) // Will throw IllegalArgumentException if DB has unknown string
+            } catch (e: Exception) {
+                Log.e(TAG, "Unknown item type in DB: $typeStr. Defaulting to UNIT.")
+                ItemType.UNIT
+            }
+            
             val quantity = cursor.getInt(cursor.getColumnIndexOrThrow(COL_QUANTITY))
             val weight = cursor.getDouble(cursor.getColumnIndexOrThrow(COL_WEIGHT))
             
             val extraInfoIndex = cursor.getColumnIndex(COL_EXTRA_INFO)
             val extraInfo = if (extraInfoIndex >= 0) cursor.getString(extraInfoIndex) ?: "" else ""
 
-            // POLYMORPHISM: Factory creates the correct subclass based on type
+            // POLYMORPHISM: Factory creates the correct subclass based on Enum
             InventoryItemFactory.create(
                 type, id, name, barcode, description, supplier, location,
                 costPrice, quantity, weight, extraInfo
@@ -308,7 +319,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
                 put(COL_SUPPLIER, item.supplier)
                 put(COL_LOCATION, item.location)
                 put(COL_COST_PRICE, item.costPrice)
-                put(COL_TYPE, item.getType())
+                put(COL_TYPE, item.type.name) // ENUM
                 put(COL_EXTRA_INFO, item.getExtraInfo())
             }
 

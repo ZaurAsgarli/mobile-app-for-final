@@ -3,6 +3,17 @@ package com.example.warewise
 import java.io.Serializable
 
 /**
+ * Enum for Type Safety
+ */
+enum class ItemType {
+    UNIT,
+    WEIGHT,
+    ELECTRONICS,
+    FOOD,
+    FURNITURE
+}
+
+/**
  * Abstract base class for all inventory items.
  * Demonstrates runtime polymorphism with getDetails() method.
  */
@@ -13,21 +24,20 @@ abstract class InventoryItem(
     open var description: String,
     open var supplier: String,
     open var location: String,
-    open var costPrice: Double
+    open var costPrice: Double,
+    open val type: ItemType // NEW: Strict Enum Type
 ) : Serializable {
     
-    // Original abstract methods (for UnitItem/WeightItem)
-    abstract fun getType(): String
+    // Abstract methods
     abstract fun getDisplayQuantity(): String
     
-    // NEW: Polymorphic method for the academic requirement
-    // Each subclass (Electronics, Food, Furniture) overrides this
+    // Polyphormic method for academic requirement
     abstract fun getDetails(): String
     
-    // NEW: Returns extra info specific to item type
+    // Returns extra info specific to item type
     open fun getExtraInfo(): String = ""
     
-    // NEW: Polymorphic low stock check - each subclass defines its own threshold
+    // Polymorphic low stock check
     abstract fun isLowStock(): Boolean
 }
 
@@ -47,9 +57,7 @@ class UnitItem(
     override var location: String,
     override var costPrice: Double,
     var quantity: Int
-) : InventoryItem(id, name, barcode, description, supplier, location, costPrice) {
-    
-    override fun getType(): String = "UNIT"
+) : InventoryItem(id, name, barcode, description, supplier, location, costPrice, ItemType.UNIT) {
     
     override fun getDisplayQuantity(): String = "$quantity units"
     
@@ -72,9 +80,7 @@ class WeightItem(
     override var location: String,
     override var costPrice: Double,
     var weight: Double
-) : InventoryItem(id, name, barcode, description, supplier, location, costPrice) {
-    
-    override fun getType(): String = "WEIGHT"
+) : InventoryItem(id, name, barcode, description, supplier, location, costPrice, ItemType.WEIGHT) {
     
     override fun getDisplayQuantity(): String = "${"%.2f".format(weight)} kg"
     
@@ -103,9 +109,7 @@ class Electronics(
     override var costPrice: Double,
     var quantity: Int,
     val warranty: String
-) : InventoryItem(id, name, barcode, description, supplier, location, costPrice) {
-    
-    override fun getType(): String = "ELECTRONICS"
+) : InventoryItem(id, name, barcode, description, supplier, location, costPrice, ItemType.ELECTRONICS) {
     
     override fun getDisplayQuantity(): String = "$quantity units"
     
@@ -131,9 +135,7 @@ class Food(
     override var costPrice: Double,
     var quantity: Int,
     val expiryDate: String
-) : InventoryItem(id, name, barcode, description, supplier, location, costPrice) {
-    
-    override fun getType(): String = "FOOD"
+) : InventoryItem(id, name, barcode, description, supplier, location, costPrice, ItemType.FOOD) {
     
     override fun getDisplayQuantity(): String = "$quantity units"
     
@@ -159,9 +161,7 @@ class Furniture(
     override var costPrice: Double,
     var quantity: Int,
     val material: String
-) : InventoryItem(id, name, barcode, description, supplier, location, costPrice) {
-    
-    override fun getType(): String = "FURNITURE"
+) : InventoryItem(id, name, barcode, description, supplier, location, costPrice, ItemType.FURNITURE) {
     
     override fun getDisplayQuantity(): String = "$quantity units"
     
@@ -184,10 +184,12 @@ class Furniture(
 object InventoryItemFactory {
     
     /**
-     * Creates the correct InventoryItem subclass based on the type string.
+     * Creates the correct InventoryItem subclass based on the type Enum.
+     * UPDATED: Accepts ItemType instead of String for safety.
+     * If you have a string, convert it BEFORE calling this (using try-catch).
      */
     fun create(
-        type: String,
+        type: ItemType,
         id: Int,
         name: String,
         barcode: String,
@@ -200,12 +202,11 @@ object InventoryItemFactory {
         extraInfo: String
     ): InventoryItem {
         return when (type) {
-            "UNIT" -> UnitItem(id, name, barcode, description, supplier, location, costPrice, quantity)
-            "WEIGHT" -> WeightItem(id, name, barcode, description, supplier, location, costPrice, weight)
-            "ELECTRONICS" -> Electronics(id, name, barcode, description, supplier, location, costPrice, quantity, extraInfo)
-            "FOOD" -> Food(id, name, barcode, description, supplier, location, costPrice, quantity, extraInfo)
-            "FURNITURE" -> Furniture(id, name, barcode, description, supplier, location, costPrice, quantity, extraInfo)
-            else -> UnitItem(id, name, barcode, description, supplier, location, costPrice, quantity)
+            ItemType.UNIT -> UnitItem(id, name, barcode, description, supplier, location, costPrice, quantity)
+            ItemType.WEIGHT -> WeightItem(id, name, barcode, description, supplier, location, costPrice, weight)
+            ItemType.ELECTRONICS -> Electronics(id, name, barcode, description, supplier, location, costPrice, quantity, extraInfo)
+            ItemType.FOOD -> Food(id, name, barcode, description, supplier, location, costPrice, quantity, extraInfo)
+            ItemType.FURNITURE -> Furniture(id, name, barcode, description, supplier, location, costPrice, quantity, extraInfo)
         }
     }
     
@@ -219,17 +220,24 @@ object InventoryItemFactory {
             val parts = qrData.split("|")
             if (parts.size != 5) return null
             
-            val type = parts[0].trim().uppercase()
+            val typeStr = parts[0].trim().uppercase()
+            // ROBUST: Try to parse Enum, fallback to null/catch if invalid
+            val type = try {
+                ItemType.valueOf(typeStr)
+            } catch (e: IllegalArgumentException) {
+                return null // Invalid type in QR
+            }
+
             val name = parts[1].trim()
             val price = parts[2].trim().toDoubleOrNull() ?: return null
             val quantity = parts[3].trim().toIntOrNull() ?: return null
             val extraInfo = parts[4].trim()
             
             when (type) {
-                "ELECTRONICS" -> Electronics(0, name, "", "", "", "", price, quantity, extraInfo)
-                "FOOD" -> Food(0, name, "", "", "", "", price, quantity, extraInfo)
-                "FURNITURE" -> Furniture(0, name, "", "", "", "", price, quantity, extraInfo)
-                else -> null
+                ItemType.ELECTRONICS -> Electronics(0, name, "", "", "", "", price, quantity, extraInfo)
+                ItemType.FOOD -> Food(0, name, "", "", "", "", price, quantity, extraInfo)
+                ItemType.FURNITURE -> Furniture(0, name, "", "", "", "", price, quantity, extraInfo)
+                else -> null // QR factory currently supports these 3 specific types as per brief
             }
         } catch (e: Exception) {
             null

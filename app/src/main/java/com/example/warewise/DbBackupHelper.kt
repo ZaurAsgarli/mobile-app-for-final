@@ -27,7 +27,7 @@ class DbBackupHelper(private val context: Context) {
                     put("supplier", item.supplier)
                     put("location", item.location)
                     put("cost_price", item.costPrice)
-                    put("type", item.getType())
+                    put("type", item.type.name) // Use ENUM name
                     put("extra_info", item.getExtraInfo())
 
                     when (item) {
@@ -94,7 +94,15 @@ class DbBackupHelper(private val context: Context) {
             for (i in 0 until jsonArray.length()) {
                 val obj = jsonArray.getJSONObject(i)
                 
-                val type = obj.optString("type", "UNIT")
+                val typeStr = obj.optString("type", "UNIT")
+                
+                // Safe Enum Parsing
+                val type = try {
+                    ItemType.valueOf(typeStr)
+                } catch (e: Exception) {
+                    ItemType.UNIT
+                }
+
                 val name = obj.getString("name")
                 val barcode = obj.optString("barcode", "")
                 val description = obj.optString("description", "")
@@ -104,13 +112,6 @@ class DbBackupHelper(private val context: Context) {
                 val quantity = obj.optInt("quantity", 0)
                 val weight = obj.optDouble("weight", 0.0)
                 val extraInfo = obj.optString("extra_info", "")
-
-                // We don't restore ID to let AutoIncrement handle it, 
-                // OR we could preserve it if we want exact clone. 
-                // Let's rely on DB to generate new IDs to avoid conflicts or just ignore ID from JSON.
-                // The prompt implies "batch insert", simpler to treat as new insertions or preserve.
-                // Factory.create normally takes ID, but addItem inserts new.
-                // We'll construct objects with ID=0 for insertion.
 
                 val item = InventoryItemFactory.create(
                     type, 0, name, barcode, description, supplier, location,
@@ -127,9 +128,8 @@ class DbBackupHelper(private val context: Context) {
     }
 
     private fun validateSchema(jsonArray: JSONArray): Boolean {
-        if (jsonArray.length() == 0) return true // Empty is technically valid schema-wise? Or fail? Let's say valid but nothing to import.
+        if (jsonArray.length() == 0) return true 
 
-        // Check first item as sample, or check all? Checking all is safer.
         for (i in 0 until jsonArray.length()) {
             val obj = jsonArray.getJSONObject(i)
             if (!obj.has("name") || !obj.has("cost_price") || !obj.has("type")) {
@@ -137,10 +137,17 @@ class DbBackupHelper(private val context: Context) {
                 return false
             }
             
-            val type = obj.getString("type")
-            val validTypes = setOf("UNIT", "WEIGHT", "ELECTRONICS", "FOOD", "FURNITURE")
-            if (type.uppercase() !in validTypes) {
-                Log.e("DbBackupHelper", "Validation failed: Invalid type '$type' at index $i")
+            val typeStr = obj.getString("type")
+            // Strict Validation against Enum
+            val isValidType = try {
+                ItemType.valueOf(typeStr)
+                true
+            } catch (e: IllegalArgumentException) {
+                false
+            }
+            
+            if (!isValidType) {
+                Log.e("DbBackupHelper", "Validation failed: Invalid type '$typeStr' at index $i")
                 return false
             }
         }

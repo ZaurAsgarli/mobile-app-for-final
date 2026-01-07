@@ -44,7 +44,8 @@ class InventoryListActivity : BaseActivity(), InventoryAdapter.OnItemInteraction
     }
 
     private fun setupFilters() {
-        binding.chipGroupInfo.setOnCheckedChangeListener { group, checkedId ->
+        @Suppress("DEPRECATION")
+        binding.chipGroupInfo.setOnCheckedChangeListener { _, _ ->
             // Re-apply filter with current search text
             val currentQuery = binding.searchView.query.toString()
             filter(currentQuery)
@@ -100,9 +101,9 @@ class InventoryListActivity : BaseActivity(), InventoryAdapter.OnItemInteraction
         // 2. Filter by Chip Selection
         val checkedId = binding.chipGroupInfo.checkedChipId
         filteredList = when (checkedId) {
-            binding.chipElectronics.id -> filteredList.filter { it.getType().equals("ELECTRONICS", ignoreCase = true) }
-            binding.chipFood.id -> filteredList.filter { it.getType().equals("FOOD", ignoreCase = true) }
-            binding.chipFurniture.id -> filteredList.filter { it.getType().equals("FURNITURE", ignoreCase = true) }
+            binding.chipElectronics.id -> filteredList.filter { it.type == ItemType.ELECTRONICS }
+            binding.chipFood.id -> filteredList.filter { it.type == ItemType.FOOD }
+            binding.chipFurniture.id -> filteredList.filter { it.type == ItemType.FURNITURE }
             binding.chipLowStock.id -> filteredList.filter { it.isLowStock() }
             else -> filteredList // "All" or nothing selected
         }

@@ -140,9 +140,9 @@ class SettingsActivity : BaseActivity() {
                 }
                 
                 // 1. Save Preference
-                getSharedPreferences("WareWisePrefs", Context.MODE_PRIVATE)
+                getSharedPreferences(WareWiseApplication.PREFS_NAME, Context.MODE_PRIVATE)
                     .edit()
-                    .putInt("THEME_MODE", mode)
+                    .putInt(WareWiseApplication.KEY_THEME, mode)
                     .apply()
 
                 // 2. Apply Theme
